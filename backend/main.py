@@ -694,3 +694,12 @@ def submit_decision(contract_id: str, payload: DecisionSubmit, db: Session = Dep
     db.add(audit)
     db.commit()
     return {"ok": True}
+
+@app.post("/api/log-error")
+async def log_error(payload: dict):
+    print("\n[CLIENT LOG] Client-side error captured:")
+    import json
+    print(json.dumps(payload, indent=2))
+    print("[CLIENT LOG] End of error log\n")
+    return {"ok": True}
+

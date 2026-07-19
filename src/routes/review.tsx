@@ -12,7 +12,10 @@ const reviewSearch = z.object({
 export const Route = createFileRoute("/review")({
   validateSearch: reviewSearch,
   loaderDeps: ({ search }) => ({ id: search.id }),
-  loader: ({ context, deps }) => context.queryClient.ensureQueryData(contractQueryOptions(deps.id)),
+  loader: ({ context, deps }) => {
+    console.log("Parent Route (/review) Loader - deps.id:", deps.id);
+    return context.queryClient.ensureQueryData(contractQueryOptions(deps.id));
+  },
   component: ReviewLayout,
   head: () => ({
     meta: [

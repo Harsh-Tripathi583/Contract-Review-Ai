@@ -57,6 +57,16 @@ function UploadPage() {
       await navigate({ to: "/review", search: { id: contractId } });
     } catch (error) {
       console.error("Contract upload or review navigation failed", error);
+      fetch("http://localhost:8000/api/log-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : "Error",
+          errorObj: String(error)
+        })
+      }).catch(() => {});
       setProcessing(false);
       toast.error("Analysis could not be opened. Check the API connection and try again.");
     }

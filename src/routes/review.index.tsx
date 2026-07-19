@@ -9,7 +9,10 @@ export const Route = createFileRoute("/review/")({
 });
 
 function OverviewPage() {
+  const search = Route.useSearch();
+  console.log("Child Route (/review/) OverviewPage - Route.useSearch() returned:", search);
   const { id } = Route.useSearch({ select: (s) => ({ id: (s as { id: string }).id }) });
+  console.log("Child Route (/review/) OverviewPage - extracted id:", id);
   const { data: contract } = useSuspenseQuery(contractQueryOptions(id));
 
   return (
