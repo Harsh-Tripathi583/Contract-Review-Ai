@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -19,6 +20,8 @@ from .schemas import (
 )
 from .parser import extract_text_pages
 from .ai_service import extract_contract_data
+
+load_dotenv(Path(__file__).resolve().with_name(".env"))
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -202,9 +205,13 @@ seed_default_contract()
 app = FastAPI(title="Contract Insight Hub API")
 
 # Configure CORS
+default_cors_origins = (
+    "http://localhost:3000,http://localhost:5173,http://localhost:8080,"
+    "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080"
+)
 cors_origins = [
     origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+    for origin in os.getenv("CORS_ORIGINS", default_cors_origins).split(",")
     if origin.strip()
 ]
 app.add_middleware(

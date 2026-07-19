@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@/components/ui/icon";
 import { TopNavBar } from "@/components/layout/chrome";
 import { useUploadContract } from "@/hooks/use-contract";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: UploadPage,
@@ -52,9 +53,12 @@ function UploadPage() {
     try {
       const { contractId } = await upload.mutateAsync(file);
       // Small artificial delay so processing UI is visible on demo.
-      setTimeout(() => navigate({ to: "/review", search: { id: contractId } }), 1800);
-    } catch {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 1800));
+      await navigate({ to: "/review", search: { id: contractId } });
+    } catch (error) {
+      console.error("Contract upload or review navigation failed", error);
       setProcessing(false);
+      toast.error("Analysis could not be opened. Check the API connection and try again.");
     }
   });
 

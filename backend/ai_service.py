@@ -1,10 +1,11 @@
 import os
 import json
+import re
 import requests
 from typing import List, Dict, Any
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "tencent/hy3:free")
 
 # Schema structure to guide the model.
 EXTRACTION_SCHEMA_PROMPT = """
@@ -83,12 +84,38 @@ Analyze the contract text page by page and extract the following information. Re
 }
 """
 
+
+def parse_model_json(content: object) -> Dict[str, Any]:
+    """Accept JSON returned directly, in a Markdown fence, or with surrounding prose."""
+    if not isinstance(content, str):
+        raise ValueError("OpenRouter returned a non-text completion.")
+
+    normalized = content.strip()
+    fenced = re.search(r"```(?:json)?\s*(.*?)```", normalized, flags=re.IGNORECASE | re.DOTALL)
+    if fenced:
+        normalized = fenced.group(1).strip()
+
+    candidates = [normalized]
+    start, end = normalized.find("{"), normalized.rfind("}")
+    if start != -1 and end > start:
+        candidates.append(normalized[start : end + 1])
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    raise ValueError("The model response did not contain a valid JSON object.")
+
 def extract_contract_data(pages_text: List[str], file_name: str) -> Dict[str, Any]:
     from dotenv import load_dotenv
     dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
     load_dotenv(dotenv_path=dotenv_path, override=True)
     api_key = os.getenv("OPENROUTER_API_KEY", "")
-    model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+    model = os.getenv("OPENROUTER_MODEL", "tencent/hy3:free")
     
     if not api_key or api_key == "your_openrouter_api_key_here":
         print("WARNING: OPENROUTER_API_KEY environment variable is not set or has placeholder value. Falling back to mock contract analysis.")
@@ -272,17 +299,10 @@ Contract Text:
     if response.status_code != 200:
         raise Exception(f"OpenRouter API request failed: {response.text}")
 
-    response_json = response.json()
     try:
+        response_json = response.json()
         content = response_json["choices"][0]["message"]["content"]
-        # In case the model wrapped it in markdown code blocks:
-        if content.startswith("```"):
-            lines = content.split("\n")
-            if lines[0].startswith("```json"):
-                content = "\n".join(lines[1:-1])
-            elif lines[0].startswith("```"):
-                content = "\n".join(lines[1:-1])
-        data = json.loads(content)
-        return data
-    except (KeyError, json.JSONDecodeError) as e:
-        raise Exception(f"Failed to parse LLM response as JSON: {e}. Raw response: {content}")
+        return parse_model_json(content)
+    except (KeyError, IndexError, json.JSONDecodeError, ValueError) as e:
+        raw_content = content if "content" in locals() else response.text
+        raise Exception(f"Failed to parse LLM response as JSON: {e}. Raw response: {raw_content}") from e
