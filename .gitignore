@@ -59,3 +59,7 @@ backend/uploads/
 *.njsproj
 *.sln
 *.sw?
+
+
+backend/__pycache__/
+__pycache__/
